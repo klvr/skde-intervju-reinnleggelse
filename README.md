@@ -1,9 +1,3 @@
----
-editor_options: 
-  markdown: 
-    wrap: 100
----
-
 # Oppgave til SKDE intervju: Reinnleggelse - Eksempeldata
 
 Dette prosjektet er tiltenkt å fremvise arbeidsflyten underveis, samt diskutere noen av veivalgene
