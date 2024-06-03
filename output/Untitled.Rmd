@@ -1,0 +1,766 @@
+---
+title: "SKDE Intervju"
+output: 
+  flexdashboard::flex_dashboard:
+    #orientation: row
+    #vertical_layout: fill
+runtime: shiny
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(ggplot2)
+library(shiny)
+library(scales)
+df <- read.csv("/Users/klevjer/R Projects/skde-intervju-reinnleggelse/data/processed/Processeddata.csv")
+dfread <- read.csv("/Users/klevjer/R Projects/skde-intervju-reinnleggelse/data/processed/ReAddata.csv")
+dfpaired <- read.csv("/Users/klevjer/R Projects/skde-intervju-reinnleggelse/data/processed/PairedSummary.csv")[,-1]
+```
+
+Meta
+====================================================================================================
+
+## Column {data-width="830"}
+
+#### <b>Oppgave og oppgavetolkning</b>
+
+Se vedlagte datasett «Eksempeldata.csv» fra Norsk intensivregister.
+Presenter kvalitetsindikatoren «Reinnleggelse».
+
+  - Hva er med, og hva er ikke?
+  
+  - Hva er vektlagt (og ikke)?
+
+Visualiser, tolk og forklar den slik at en ikke-medisiner kan lese og forstå presentasjonen.
+
+  - Hvem er publikum?
+
+Du står helt fritt i hvilke verktøy du vil benytte til visualisering/presentasjon.
+
+  - Hva er setting for presentasjonen?
+
+#### <b>Presentasjonen</b>
+
+  - Proof of Concept (visuelt, stats, innhold, engasjerende)
+  
+  - Meta introduksjon: Ren presentasjon
+  
+  - Ingen/lite meta kommentarer underveis
+  
+  - Ingen kode
+  
+  - Ingen forklaring av prosess
+  
+#### <b>Prosjekt (GitHub)</b>
+
+  - Workflow, kommentarer, kode, etc.
+  
+  - github.com/klvr/skde-intervju-reinnleggelse / QR ->
+  
+  - No judgement!
+  
+
+## Column {data-width="170"}
+```{r}
+output$qr <- renderImage({
+    list(src = "/Users/klevjer/R Projects/skde-intervju-reinnleggelse/www/qr.jpg", width = "90%")
+  }, deleteFile = F)
+tabPanel(title = "GitHub",
+         imageOutput("qr")
+         )
+```
+
+Norsk Intensivregister
+====================================================================================================
+#### Basert på [Norsk intensivregister - Årsrapport for 2018 med plan for forbedringstiltak v1.1](https://www.helse-bergen.no/4a967b/siteassets/seksjon/intensivregister/documents/arsrapporter/arsrapporter-i-nir/nir-arsrapport-2018.pdf)
+
+#### <b>Intensivmedisin</b>
+
+  - Spesialisert overvåkning og behandling av pasienter med truende eller manifisert akutt svikt i en eller flere vitale organfunksjoner.
+
+  - Stor variasjon, heterogenitet, og behandler alle aldersgrupper og med et vidt spekter av sykdommer, 
+  medisinske tilstander og skader.
+
+  - Preget av høy dødlighet, høy ressursbruk, avansert medisinsk-teknisk utstyr, og spesialutdannet personell.
+  
+  - Liten grad av utarbeidede standarer og etablerte retningslinjer for intensivmedisinsk behandling.
+  
+  - Stor varisjon i organisering ved forskjellige instutisjoner. Dermed også stor variasjon av pasienttilfang og profil.
+  
+#### <b>Norsk intensivregister (NIR)</b>
+    
+  - Stiftet 1998 av Norsk anestesiologisk forening (NAF).
+  
+  - Register bygget på opplysninger om pasienter behandlet ved norske intensivavdelinger.
+
+  - Kartlegge kapasiteter, deretter mer generelt om norsk intensivmedisin.
+  
+  - NIR er estimert til 97% overensstemmelse med lokale opplysninger, og har 82% dekning på
+instutisjonsnivå.
+
+#### <b>Hvem fanger NIR opp?</b>
+Følgende pasientopphold registreres i NIR:
+
+- Pasienter som ligger på intensiv/overvåkning i mer enn 24 timer.
+
+- Pasienter som dør på intensiv/overvåkning.
+
+- Pasienter som har fått mekanisk pustestøtte.
+
+- Pasienter som har blitt overført til annen ressurs-/intensivavdeling.
+
+- Pasienter som har fått kontinuerlig vasoaktiv infusjon over 6 timer, med invasiv blodtrykksmåling.
+
+#### <b>Kvalitetsindikatorer</b>
+
+Hvordan undersøke, og forbedre, et så krevende og heterogent arbeidsfelt?
+
+  - Strukturindikatorer
+  
+  - Prosessindikatorer
+  
+  - Resultatindikatorer
+  
+#### <b>Resultatindikatorer</b>
+
+  - Median respiratortid (<2,5 døgn)
+  
+  - Standardisert mortalitetsratio (SMR; <0,7 [etter ikke-justert alvorlighetsskåre])
+  
+  - <b>Reinnlegging til intensiv i løpet av 72 timer (<4% av opphold)</b>
+
+Nøkkeltall
+====================================================================================================
+```{r}
+selectInput("hospital", label = "Sykehus:",
+            choices = c(c("Alle",sort(unique(df$SykehusNavn)))), selected = "Alle")
+```
+
+Row
+----------------------------------------------------------------------------------------------------
+### Sykehus
+
+```{r}
+renderValueBox({
+  if(input$hospital=="Alle"){
+    articles <- length(unique(df[,14]))
+    farge <- "primary"
+    } else {
+    articles <- input$hospital
+    farge <- "grey"
+      }
+valueBox(articles, icon = "ion-ios-medkit", color = farge)})
+```
+
+### Pasienter
+
+```{r}
+renderValueBox({
+  if(input$hospital=="Alle"){
+    articles <- length(unique(df[,2]))
+    } else {
+    articles <- length(unique(df[df$SykehusNavn==input$hospital,2]))
+      }
+valueBox(articles, icon = "ion-ios-body")})
+```
+
+### Median alder
+
+```{r}
+renderValueBox({
+  if(input$hospital=="Alle"){
+    articles <- median(df[,9], na.rm = TRUE)
+    } else {
+    articles <- median(df[df$SykehusNavn==input$hospital,9], na.rm = TRUE)
+      }
+valueBox(articles, icon = "ion-ios-glasses-outline")})
+```
+
+### Innleggelser
+
+```{r}
+renderValueBox({
+   if(input$hospital=="Alle"){
+    articles <- nrow(df[,])
+    } else {
+    articles <- nrow(df[df$SykehusNavn==input$hospital,])
+      }
+valueBox(articles, icon = "ion-android-clipboard")})
+```
+
+### Reinnleggelser
+
+```{r}
+renderValueBox({
+   if(input$hospital=="Alle"){
+    articles <- sum(df[,5])
+    } else {
+    articles <- sum(df[df$SykehusNavn==input$hospital,5])
+      }
+valueBox(articles, icon = "ion-android-refresh", color = "#D55E00")})
+```
+
+Column
+----------------------------------------------------------------------------------------------------
+
+### Median døgn innlagt
+
+```{r}
+renderValueBox({
+if(input$hospital=="Alle"){
+    articles <- median(df[,8], na.rm = TRUE)
+    } else {
+    articles <- median(df[df$SykehusNavn==input$hospital,8], na.rm = TRUE)
+      }
+valueBox(articles, icon = "ion-android-alarm-clock")})
+```
+
+### Respiratorstøtte
+
+```{r}
+renderValueBox({
+if(input$hospital=="Alle"){
+    articles <- round(mean(df[,3])*100)
+    } else {
+    articles <- round(mean(df[df$SykehusNavn==input$hospital,3])*100)
+      }
+valueBox(paste(articles, "%"), icon = "ion-android-settings")})
+```
+
+### Median døgn på respirator
+
+```{r}
+renderValueBox({
+if(input$hospital=="Alle"){
+    articles <- median(df[df[,10]>0,10], na.rm = TRUE)
+    } else {
+      inter <- df[df$SykehusNavn==input$hospital,]
+    articles <- median(inter[inter[,10]>0,10], na.rm = TRUE)
+      }
+valueBox(articles, icon = "ion-android-settings")})
+```
+
+### Utskrevet i live
+
+```{r}
+renderValueBox({
+if(input$hospital=="Alle"){
+    articles <- round(((nrow(df[,])-sum(df[,12]))/nrow(df[,]))*100)
+    } else {
+    articles <- round(((nrow(df[df$SykehusNavn==input$hospital,])-sum(df[df$SykehusNavn==input$hospital,12]))/nrow(df[df$SykehusNavn==input$hospital,]))*100)
+      }
+valueBox(paste(articles, "%"), icon = "ion-checkmark-circled")})
+```
+
+### Døde under oppholdet
+
+```{r}
+renderValueBox({
+if(input$hospital=="Alle"){
+    articles <- 100-round(((nrow(df[,])-sum(df[,12]))/nrow(df[,]))*100)
+    } else {
+    articles <- 100-round(((nrow(df[df$SykehusNavn==input$hospital,])-sum(df[df$SykehusNavn==input$hospital,12]))/nrow(df[df$SykehusNavn==input$hospital,]))*100)
+      }
+valueBox(paste(articles, "%"), icon = "ion-android-cancel")})
+```
+
+Overordnet
+====================================================================================================
+
+## Column {data-width="650"}
+
+### Årsak til innleggelse
+
+```{r}
+dfBar <- NULL
+for (i in sort(unique(df[,6]))) {
+  bar <- c(i, sum(df[,6]==i))
+  dfBar <- rbind(dfBar, bar)
+}
+dfBar <- as.data.frame(dfBar)
+dfBar[,1] <- c("Respiratorisk svikt", "Sirk./kardiovaskulær svikt", "Gastroenterologisk svikt",
+               "Nevrologisk svikt", "Sepsis", "Skade/traume", "Metabolsk/intoksikasjon",
+               "Hematologisk svikt", "Nyresvikt", "Postoperativt", "Annet")
+ggplot(dfBar, aes(x=V1, y = V2, fill=V1)) +
+  geom_bar(stat = "identity") +
+  ggtitle("10000 Innleggelser") + 
+  xlab(element_blank()) +
+  ylab(element_blank()) +
+  labs(fill="Årsak") +
+  geom_text(aes(label = V2), size = 3) +
+  theme_minimal() +
+  theme(axis.text.x = element_blank())
+```
+
+## Column {data-width="420"}
+
+### Type innleggelse
+
+```{r}
+dfPie <- NULL
+for (i in sort(unique(df[,11]))) {
+  pie <- c(i, sum(df[,11]==i))
+  dfPie <- rbind(dfPie, pie)
+}
+dfPie <- as.data.frame(dfPie)
+dfPie[,1] <- c("Planlagt", "Akutt medisinsk", "Akutt kirurgisk")
+ggplot(dfPie, aes(x="", y = V2, fill=V1)) +
+  geom_col(color= "black") +
+  geom_text(aes(label = V2), position = position_stack(vjust = 0.5)) +
+  coord_polar(theta = "y") +
+  guides(fill = guide_legend(title = "")) +
+  theme_void() +
+  theme(legend.position = "bottom")
+```
+
+### Lengde på opphold
+
+```{r}
+lengde <- df[,c(1,8)]
+lengde$DaysAdmitted <- ceiling(lengde$DaysAdmitted)
+for (i in 1:nrow(lengde)) {
+  if (lengde[i,2]>13) {
+    lengde[i,2] <- 14
+  } else if (lengde[i,2]>6) {
+    lengde[i,2] <- 7
+  } else if (lengde[i,2]==0) {
+    lengde[i,2] <- 1  
+    }
+}
+lengde$DaysAdmitted <- as.factor(lengde$DaysAdmitted)
+ggplot(lengde, aes(x = DaysAdmitted)) +
+  geom_bar(fill = "#CC79A7") +
+  ylab(label = "Antall innleggelser") +
+  xlab(label = "Dager innlagt") +
+  scale_x_discrete(labels=c("0-1", "1-2", "2-3", "3-4", "4-5", "5-6", "7-14", "14+")) +
+  scale_y_continuous() +
+  theme_classic()
+```
+
+### Gjentakende innleggelser 1261 pasienter
+
+```{r}
+# 7020 patients with one stay
+multStay <- df[df$Nstays>1,c(1,23)]
+NStay <- NULL
+for(i in 2:11) {
+  inter <- cbind(i, ((sum(multStay$Nstays==i))/i))
+  NStay <- rbind(NStay, inter)
+}
+NStay[NStay[,1]==6,2] <- sum(NStay[NStay[,1]>5,2])
+NStay <- as.data.frame(NStay[!(NStay[,1]>6),])
+NStay$Prosent <- (NStay[,2] / sum(NStay[,2]))
+colnames(NStay) <- c("Lengde", "Antall", "Prosent")
+NStay$Lengde <- as.factor(NStay$Lengde)
+ggplot(NStay, aes(x = Lengde, y = Prosent)) +
+  geom_bar(stat = "identity", fill = "#D55E00") +
+  geom_text(aes(label = Antall), size = 4, colour = "black") +
+  scale_y_continuous(labels = percent) +
+  ylab(element_blank()) +
+  xlab(label = "Antall innleggelser") +
+  scale_x_discrete(labels=c("2","3","4","5","6+")) +
+  labs(title = "7020 pasienter hadde kun en innleggelse") +
+  theme_minimal()
+```
+
+Reinnleggelse: Intro
+====================================================================================================
+
+#### Basert på [Norsk intensivregister - Årsrapport for 2018 med plan for forbedringstiltak v1.1](https://www.helse-bergen.no/4a967b/siteassets/seksjon/intensivregister/documents/arsrapporter/arsrapporter-i-nir/nir-arsrapport-2018.pdf)
+
+#### <b>Reinnleggelse</b>
+
+  - 'Resultatindikator' (sammen med SMR og respiratortid).
+
+  - Pasient reinnlagt til en intensivavdeling i løpet av 72 timer etter utskriving.
+
+#### <b>Problematisk?</b>
+
+  - Ny, uforutsett, komplikasjon eller sykdom.
+
+  - For tidlig utskrivelse (ikke postklar).
+
+  - Målsetning <4% av alle opphold, og brukes også på instutisjonsnivå.
+
+#### <b>Meta</b>
+
+  - Flere innleggelser er merket som reinnleggelse, uten at PatientRegistryID (pasienter) har en tilhørende orginal innleggelse. Antar dette er et resultat av kutt i datasett. 
+  
+  - 280 reinnleggelser, fordelt på 258 unike pasienter. Hvor 17 bare har den ene innleggelsen. 4 har flere innleggelser, men ingen nære nok i tid for å kvalifisere. Og 237 pasienter har innleggelser som kan kobles (564 koblede innleggelser totalt på disse).
+  
+  - Ytterligere 5 hadde ikke naturlig koblede innleggelser -> 232 hvor readmission kan undersøkes opp mot orginale admission.
+  
+  - Enkelte "merkligheter", f.eks. "2090FB01-69F4-E7A95B" ble skrevet ut etter ny innleggelse (og ikke registrert som reinnleggelse).
+  
+  - Restriktiv fremgangsmåte.
+  
+  - Ikke kjønn, alder, instutisjon, komplett data.
+  
+  - Ukjent syntetisk tilstand.
+
+
+Reinnleggelse: Oversikt
+====================================================================================================
+```{r}
+select <- c("Alle",1)
+names(select) <- c("Alle","Reinnleggelse")
+selectInput("read", label = "Reinnleggelse:",
+            choices = c(select), selected = "Alle")
+```
+
+Row
+----------------------------------------------------------------------------------------------------
+### Pasienter
+
+```{r}
+renderValueBox({
+  if(input$read=="Alle"){
+    articles <- length(unique(df[,2]))
+    } else {
+    articles <- length(unique(df[df$ReAdmitted==input$read,2]))
+      }
+valueBox(articles, icon = "ion-ios-body")})
+```
+
+### Median alder
+
+```{r}
+renderValueBox({
+  if(input$read=="Alle"){
+    articles <- median(df[,9], na.rm = TRUE)
+    } else {
+    articles <- median(df[df$ReAdmitted==input$read,9], na.rm = TRUE)
+      }
+valueBox(articles, icon = "ion-ios-glasses-outline")})
+```
+
+### Innleggelser
+
+```{r}
+renderValueBox({
+   if(input$read=="Alle"){
+    articles <- nrow(df[,])
+    } else {
+    articles <- nrow(df[df$ReAdmitted==input$read,])
+      }
+valueBox(articles, icon = "ion-android-clipboard")})
+```
+
+### Median døgn innlagt
+
+```{r}
+renderValueBox({
+if(input$read=="Alle"){
+    articles <- median(df[,8], na.rm = TRUE)
+    } else {
+    articles <- median(df[df$ReAdmitted==input$read,8], na.rm = TRUE)
+      }
+valueBox(articles, icon = "ion-android-alarm-clock")})
+```
+
+Column
+----------------------------------------------------------------------------------------------------
+
+### Respiratorstøtte
+
+```{r}
+renderValueBox({
+if(input$read=="Alle"){
+    articles <- round(mean(df[,3])*100)
+    } else {
+    articles <- round(mean(df[df$ReAdmitted==input$read,3])*100)
+      }
+valueBox(paste(articles, "%"), icon = "ion-android-settings")})
+```
+
+### Median døgn på respirator
+
+```{r}
+renderValueBox({
+if(input$read=="Alle"){
+    articles <- median(df[df[,10]>0,10], na.rm = TRUE)
+    } else {
+      inter <- df[df$ReAdmitted==input$read,]
+    articles <- median(inter[inter[,10]>0,10], na.rm = TRUE)
+      }
+valueBox(articles, icon = "ion-android-settings")})
+```
+
+### Utskrevet i live
+
+```{r}
+renderValueBox({
+if(input$read=="Alle"){
+    articles <- round(((nrow(df[,])-sum(df[,12]))/nrow(df[,]))*100)
+    } else {
+    articles <- round(((nrow(df[df$ReAdmitted==input$read,])-sum(df[df$ReAdmitted==input$read,12]))/nrow(df[df$ReAdmitted==input$read,]))*100)
+      }
+valueBox(paste(articles, "%"), icon = "ion-checkmark-circled")})
+```
+
+### SAPS2
+
+```{r}
+renderValueBox({
+if(input$read=="Alle"){
+    articles <- median(df[,13], na.rm = TRUE)
+    } else {
+    articles <- median(df[df$ReAdmitted==input$read,13], na.rm = TRUE)
+      }
+valueBox(paste(articles), icon = "ion-android-cancel", color = "#D55E00")})
+```
+
+Reinnleggelse: Kjennetegn
+====================================================================================================
+```{r}
+dfone <- df[df$Nstays==1,c(6,8,13,3,12)]
+dfred <- dfpaired[,c(2,4,11,6,10)]
+colnames(dfred)<-colnames(dfone)
+```
+
+
+Row {.tabset}
+----------------------------------------------------------------------------------------------------
+
+### Årsak til innleggelse
+
+```{r}
+dfoneBar <- NULL
+for (i in sort(unique(dfone[,1]))) {
+  bar <- c(i, sum(dfone[,1]==i))
+  dfoneBar <- rbind(dfoneBar, bar)
+}
+dfoneBar <- as.data.frame(dfoneBar)
+dfoneBar[,1] <- c("Respiratorisk svikt", "Sirk./kardiovaskulær svikt", "Gastroenterologisk svikt",
+               "Nevrologisk svikt", "Sepsis", "Skade/traume", "Metabolsk/intoksikasjon",
+               "Hematologisk svikt", "Nyresvikt", "Postoperativt", "Annet")
+ggplot(dfoneBar, aes(x=V1, y = V2, fill=V1)) +
+  geom_bar(stat = "identity") +
+  xlab(element_blank()) +
+  ylab(element_blank()) +
+  labs(fill="Årsak") +
+  geom_text(aes(label = V2), size = 3) +
+  theme_minimal() +
+  labs(title = "7020 pasienter med kun en innleggelse") +
+  theme(axis.text.x = element_blank())
+```
+
+### Dager innlagt
+
+```{r}
+lengde <- dfone[,c(1,2)]
+lengde$DaysAdmitted <- ceiling(lengde$DaysAdmitted)
+for (i in 1:nrow(lengde)) {
+  if (lengde[i,2]>13) {
+    lengde[i,2] <- 14
+  } else if (lengde[i,2]>6) {
+    lengde[i,2] <- 7
+  } else if (lengde[i,2]==0) {
+    lengde[i,2] <- 1  
+    }
+}
+lengde$DaysAdmitted <- as.factor(lengde$DaysAdmitted)
+ggplot(lengde, aes(x = DaysAdmitted)) +
+  geom_bar(fill = "#CC79A7") +
+  ylab(label = "Antall innleggelser") +
+  xlab(label = "Dager innlagt") +
+  scale_x_discrete(labels=c("0-1", "1-2", "2-3", "3-4", "4-5", "5-6", "7-14", "14+")) +
+  scale_y_continuous() +
+  labs(title = "7020 pasienter med kun en innleggelse") +
+  theme_classic()
+```
+
+### SAPS2 Skåre
+
+```{r}
+saps <- as.data.frame(cbind(1:nrow(dfone), dfone[,3]))
+colnames(saps) <- c("V1", "SAPS2")
+saps <- saps[!is.na(saps$SAPS2),]
+ggplot(saps, aes(x = SAPS2)) +
+  geom_histogram(color= "black",fill = "#D55E00", binwidth = 5) +
+  xlim(0,100) +
+  geom_vline(aes(xintercept=median(saps$SAPS2))) +
+  xlab(element_blank()) +
+  ylab(element_blank()) +
+  labs(title = "7020 pasienter med kun en innleggelse", subtitle = "n = 6789") +
+  theme_minimal()
+```
+
+### Respirator
+
+```{r}
+dfPie <- NULL
+for (i in sort(unique(dfone[,4]))) {
+  pie <- c(i, sum(dfone[,4]==i))
+  dfPie <- rbind(dfPie, pie)
+}
+dfPie <- as.data.frame(dfPie)
+dfPie[,1] <- c("Uten", "På respirator")
+ggplot(dfPie, aes(x="", y = V2, fill=V1)) +
+  geom_col(color= "black") +
+  geom_text(aes(label = V2), position = position_stack(vjust = 0.5)) +
+  coord_polar(theta = "y") +
+  guides(fill = guide_legend(title = "")) +
+  theme_void() +
+  labs(title = "7020 pasienter med kun en innleggelse") +
+  theme(legend.position = "bottom")
+```
+
+### Overlevelse
+
+```{r}
+dfPie <- NULL
+for (i in sort(unique(dfone[,5]))) {
+  pie <- c(i, sum(dfone[,5]==i))
+  dfPie <- rbind(dfPie, pie)
+}
+dfPie <- as.data.frame(dfPie)
+dfPie[,1] <- c("I livet", "Døde")
+ggplot(dfPie, aes(x="", y = V2, fill=V1)) +
+  geom_col(color= "black") +
+  geom_text(aes(label = V2), position = position_stack(vjust = 0.5)) +
+  coord_polar(theta = "y") +
+  guides(fill = guide_legend(title = "")) +
+  theme_void() +
+  labs(title = "7020 pasienter med kun en innleggelse") +
+  theme(legend.position = "bottom")
+```
+
+
+Row {.tabset}
+----------------------------------------------------------------------------------------------------
+
+### Årsak til innleggelse
+
+```{r}
+dfredBar <- NULL
+for (i in sort(unique(dfred[,1]))) {
+  bar <- c(i, sum(dfred[,1]==i))
+  dfredBar <- rbind(dfredBar, bar)
+}
+dfredBar <- as.data.frame(dfredBar)
+dfredBar[,1] <- c("Respiratorisk svikt", "Sirk./kardiovaskulær svikt", "Gastroenterologisk svikt",
+               "Nevrologisk svikt", "Sepsis", "Skade/traume", "Metabolsk/intoksikasjon",
+               "Hematologisk svikt", "Nyresvikt", "Postoperativt", "Annet")
+ggplot(dfredBar, aes(x=V1, y = V2, fill=V1)) +
+  geom_bar(stat = "identity") +
+  xlab(element_blank()) +
+  ylab(element_blank()) +
+  labs(fill="Årsak") +
+  geom_text(aes(label = V2), size = 3) +
+  theme_minimal() +
+  labs(title = "232 pasienter med reinnleggelse") +
+  theme(axis.text.x = element_blank())
+```
+
+### Dager innlagt
+
+```{r}
+lengde <- dfred[,c(1,2)]
+lengde$DaysAdmitted <- ceiling(lengde$DaysAdmitted)
+for (i in 1:nrow(lengde)) {
+  if (lengde[i,2]>13) {
+    lengde[i,2] <- 14
+  } else if (lengde[i,2]>6) {
+    lengde[i,2] <- 7
+  } else if (lengde[i,2]==0) {
+    lengde[i,2] <- 1  
+    }
+}
+lengde$DaysAdmitted <- as.factor(lengde$DaysAdmitted)
+ggplot(lengde, aes(x = DaysAdmitted)) +
+  geom_bar(fill = "#CC79A7") +
+  ylab(label = "Antall innleggelser") +
+  xlab(label = "Dager innlagt") +
+  scale_x_discrete(labels=c("0-1", "1-2", "2-3", "3-4", "4-5", "5-6", "7-14", "14+")) +
+  scale_y_continuous() +
+  labs(title = "232 pasienter med reinnleggelse") +
+  theme_classic()
+```
+
+### SAPS2 Skåre
+
+```{r}
+saps <- as.data.frame(cbind(1:nrow(dfred), dfred[,3]))
+colnames(saps) <- c("V1", "SAPS2")
+saps <- saps[!is.na(saps$SAPS2),]
+ggplot(saps, aes(x = SAPS2)) +
+  geom_histogram(color= "black",fill = "#D55E00", binwidth = 5) +
+  geom_vline(aes(xintercept=median(saps$SAPS2))) +
+  xlim(0,100) +
+  xlab(element_blank()) +
+  ylab(element_blank()) +
+  labs(title = "232 pasienter med reinnleggelse", subtitle = "n = 231") +
+  theme_minimal()
+```
+
+### Respirator
+
+```{r}
+dfPie <- NULL
+for (i in sort(unique(dfred[,4]))) {
+  pie <- c(i, sum(dfred[,4]==i))
+  dfPie <- rbind(dfPie, pie)
+}
+dfPie <- as.data.frame(dfPie)
+dfPie[,1] <- c("Uten", "På respirator")
+ggplot(dfPie, aes(x="", y = V2, fill=V1)) +
+  geom_col(color= "black") +
+  geom_text(aes(label = V2), position = position_stack(vjust = 0.5)) +
+  coord_polar(theta = "y") +
+  guides(fill = guide_legend(title = "")) +
+  theme_void() +
+  labs(title = "232 pasienter med reinnleggelse") +
+  theme(legend.position = "bottom")
+```
+
+### Overlevelse
+
+```{r}
+dfPie <- NULL
+for (i in sort(unique(dfred[,5]))) {
+  pie <- c(i, sum(dfred[,5]==i))
+  dfPie <- rbind(dfPie, pie)
+}
+dfPie <- as.data.frame(dfPie)
+dfPie[,1] <- c("I livet", "Døde")
+ggplot(dfPie, aes(x="", y = V2, fill=V1)) +
+  geom_col(color= "black") +
+  geom_text(aes(label = V2), position = position_stack(vjust = 0.5)) +
+  coord_polar(theta = "y") +
+  guides(fill = guide_legend(title = "")) +
+  theme_void() +
+  labs(title = "232 pasienter med reinnleggelse") +
+  theme(legend.position = "bottom")
+```
+
+
+
+Kvalitetsvariabel
+====================================================================================================
+
+#### <b>Intensivavdelinger</b>
+
+  - Stor variasjon, heterogenitet, med et vidt spekter av sykdommer, medisinske tilstander og skader.
+
+  - Preget av høy dødlighet, høy ressursbruk, avansert medisinsk-teknisk utstyr, og spesialutdannet personell.
+  
+  - Liten grad av utarbeidede standarer og etablerte retningslinjer.
+  
+#### <b>Reinleggelse</b>
+
+  - Pasient reinnlagt til en intensivavdeling i løpet av 72 timer etter utskriving.
+
+  - Ny, uforutsett, komplikasjon eller sykdom.
+
+  - For tidlig utskrivelse (ikke postklar).
+  
+#### <b>Kvalitetsvariabel med støy</b>
+
+  - Det uforutsette
+  
+  - Det systematiske
+  
+#### <b>Hva fanger den ikke?</b>
+
+
